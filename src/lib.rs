@@ -67,17 +67,27 @@ pub struct PkvStore {
 }
 
 impl PkvStore {
-    /// Creates or opens a persistent key value store
+    /// Creates or opens a persistent key value store, panicing if it cannot be done
     ///
     /// The given `organization` and `application` are used to create a backing file
     /// in a corresponding location on the users device. Usually within the home or user folder
     pub fn new(organization: &str, application: &str) -> Self {
+        Self::try_new(organization, application).expect("Not available")
+    }
+    /// Creates or opens a persistent key value store, giving an Err if it cannot be done
+    ///
+    /// The given `organization` and `application` are used to create a backing file
+    /// in a corresponding location on the users device. Usually within the home or user folder
+    pub fn try_new(
+        organization: &str,
+        application: &str,
+    ) -> Result<Self, backend::InnerStoreError> {
         let config = PlatformDefault {
             qualifier: None,
             organization: organization.to_string(),
             application: application.to_string(),
         };
-        Self::new_in_location(&config)
+        Self::try_new_in_location(&config)
     }
 
     /// Creates or opens a persistent key value store
@@ -85,13 +95,17 @@ impl PkvStore {
     /// Like [`PkvStore::new`], but also provide a qualifier.
     /// Some operating systems use the qualifier as part of the path to the store.
     /// The qualifier is usually "com", "org" etc.
-    pub fn new_with_qualifier(qualifier: &str, organization: &str, application: &str) -> Self {
+    pub fn new_with_qualifier(
+        qualifier: &str,
+        organization: &str,
+        application: &str,
+    ) -> Result<Self, backend::InnerStoreError> {
         let config = PlatformDefault {
             qualifier: Some(qualifier.to_string()),
             organization: organization.to_string(),
             application: application.to_string(),
         };
-        Self::new_in_location(&config)
+        Self::try_new_in_location(&config)
     }
 
     /// Creates or opens a persistent key value store
@@ -105,9 +119,9 @@ impl PkvStore {
         Self { inner }
     }
 
-    fn new_in_location(config: &PlatformDefault) -> Self {
-        let inner = backend::InnerStore::new(Location::PlatformDefault(config));
-        Self { inner }
+    fn try_new_in_location(config: &PlatformDefault) -> Result<Self, backend::InnerStoreError> {
+        let inner = backend::InnerStore::try_new(Location::PlatformDefault(config))?;
+        Ok(Self { inner })
     }
 
     /// Serialize and store the value

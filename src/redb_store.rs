@@ -12,6 +12,7 @@ impl Debug for ReDbStore {
     }
 }
 pub use ReDbStore as InnerStore;
+pub use ReDbStoreError as InnerStoreError;
 
 /// Errors that can occur during `PkvStore::get`
 #[derive(thiserror::Error, Debug)]
@@ -53,19 +54,39 @@ pub enum SetError {
     MessagePack(#[from] rmp_serde::encode::Error),
 }
 
+#[derive(thiserror::Error, Debug)]
+pub enum ReDbStoreError {
+    #[error("Failed to create directory to init key value store")]
+    IO(std::io::Error),
+    #[error("Failed to init key value store")]
+    DB(redb::DatabaseError),
+}
+impl From<std::io::Error> for ReDbStoreError {
+    fn from(value: std::io::Error) -> Self {
+        Self::IO(value)
+    }
+}
+impl From<redb::DatabaseError> for ReDbStoreError {
+    fn from(value: redb::DatabaseError) -> Self {
+        Self::DB(value)
+    }
+}
+
 impl ReDbStore {
     pub(crate) fn new(location: Location) -> Self {
+        Self::try_new(location).unwrap()
+    }
+    pub(crate) fn try_new(location: Location) -> Result<Self, ReDbStoreError> {
         let dir_path = location.get_path();
-        std::fs::create_dir_all(&dir_path)
-            .expect("Failed to create directory to init key value store");
+        std::fs::create_dir_all(&dir_path)?;
         let db_path = dir_path.join("bevy_pkv.redb");
-        let db = Database::create(db_path).expect("Failed to init key value store");
+        let db = Database::create(db_path)?;
 
         let write_txn = db.begin_write().unwrap();
         write_txn.open_table(TABLE).unwrap();
         write_txn.commit().unwrap();
 
-        Self { db }
+        Ok(Self { db })
     }
 }
 

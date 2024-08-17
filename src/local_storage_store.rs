@@ -5,7 +5,11 @@ pub struct LocalStorageStore {
     prefix: String,
 }
 
+#[derive(Debug, Default)]
+pub struct LocalStorageStoreError();
+
 pub use LocalStorageStore as InnerStore;
+pub use LocalStorageStoreError as InnerStoreError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum GetError {
@@ -36,19 +40,22 @@ impl LocalStorageStore {
             .expect("No local storage")
     }
 
-    pub(crate) fn new(constructor_bundle: Location) -> Self {
+    pub(crate) fn try_new(constructor_bundle: Location) -> Result<Self, LocalStorageStoreError> {
         let Location::PlatformDefault(config) = constructor_bundle;
         let PlatformDefault {
             qualifier,
             organization,
             application,
         } = config;
-        Self {
+        Ok(Self {
             prefix: match qualifier.as_deref() {
                 Some(qualifier) => format!("{qualifier}.{organization}.{application}"),
                 None => format!("{organization}.{application}"),
             },
-        }
+        })
+    }
+    pub(crate) fn new(constructor_bundle: Location) -> Self {
+        Self::try_new(constructor_bundle).unwrap()
     }
 
     fn format_key(&self, key: &str) -> String {
