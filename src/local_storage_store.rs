@@ -11,22 +11,30 @@ pub struct LocalStorageStoreError();
 pub use LocalStorageStore as InnerStore;
 pub use LocalStorageStoreError as InnerStoreError;
 
+/// Errors
 #[derive(thiserror::Error, Debug)]
 pub enum GetError {
+    /// No value found for the given key
     #[error("No value found for the given key")]
     NotFound,
+    /// Error deserializing JSON
     #[error("error deserializing json")]
     Json(#[from] serde_json::Error),
+    /// JavaScript error from getItem
     #[error("JavaScript error from getItem")]
     GetItem(wasm_bindgen::JsValue),
 }
 
+/// Errors 2
 #[derive(thiserror::Error, Debug)]
 pub enum SetError {
+    /// JavaScript error from getItem
     #[error("JavaScript error from setItem")]
     SetItem(wasm_bindgen::JsValue),
+    /// Error serializing as JSON
     #[error("Error serializing as json")]
     Json(#[from] serde_json::Error),
+    /// JavaScript error from clear
     #[error("JavaScript error from clear")]
     Clear(wasm_bindgen::JsValue),
 }
@@ -53,9 +61,6 @@ impl LocalStorageStore {
                 None => format!("{organization}.{application}"),
             },
         })
-    }
-    pub(crate) fn new(constructor_bundle: Location) -> Self {
-        Self::try_new(constructor_bundle).unwrap()
     }
 
     fn format_key(&self, key: &str) -> String {
